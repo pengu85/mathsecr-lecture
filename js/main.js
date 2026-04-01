@@ -203,7 +203,6 @@ surveySubmitBtn.addEventListener('click', async () => {
     } else {
       await fetch(GAS_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(finalData),
         mode: 'no-cors',
       });

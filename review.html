@@ -352,7 +352,6 @@
         } else {
           await fetch(GAS_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(reviewData),
             mode: 'no-cors',
           });
