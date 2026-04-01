@@ -154,96 +154,8 @@ function handleGetReviews() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// 2. Google Meet 링크 자동 생성
+// 2. 유튜브 라이브 링크 관리
 // ═══════════════════════════════════════════════════════════
-
-/**
- * 다음 월요일 강의용 Google Meet 이벤트를 생성하고 Meet 링크를 반환합니다.
- * 금요일 트리거(sendFridayReminder)에서 자동 호출됩니다.
- *
- * @returns {string} Google Meet 링크
- */
-function createWeeklyMeetEvent() {
-  const settings = getSettings();
-  const weekTopic = settings.thisWeekTopic || '수학비서 AI 활용법 강의';
-  const weekNum = settings.currentWeek || '1';
-
-  // 다음 월요일 날짜 계산
-  const nextMonday = getNextMonday();
-  const startTime = new Date(nextMonday);
-  startTime.setHours(22, 30, 0, 0); // 22:30
-  const endTime = new Date(nextMonday);
-  endTime.setHours(23, 30, 0, 0);   // 23:30
-
-  // Calendar Advanced Service로 Meet 링크 포함 이벤트 생성
-  const event = {
-    summary: `[수학비서] WEEK ${weekNum}: ${weekTopic}`,
-    description: `수학비서 AI 활용법 강의 ${weekNum}주차\n\n주제: ${weekTopic}\n\n${settings.thisWeekDescription || ''}`,
-    start: {
-      dateTime: startTime.toISOString(),
-      timeZone: 'Asia/Seoul',
-    },
-    end: {
-      dateTime: endTime.toISOString(),
-      timeZone: 'Asia/Seoul',
-    },
-    conferenceData: {
-      createRequest: {
-        requestId: `mathsecr-week${weekNum}-${Date.now()}`,
-        conferenceSolutionKey: {
-          type: 'hangoutsMeet',
-        },
-      },
-    },
-    // 신청자들에게 캘린더 초대 보내지 않음 (메일로 별도 안내)
-    guestsCanModify: false,
-  };
-
-  const calendarEvent = Calendar.Events.insert(
-    event,
-    CONFIG.CALENDAR_ID,
-    { conferenceDataVersion: 1 }
-  );
-
-  const meetLink = calendarEvent.conferenceData.entryPoints
-    .find(ep => ep.entryPointType === 'video').uri;
-
-  // 설정 시트에 이번 주 Meet 링크 저장
-  saveMeetLink(meetLink, calendarEvent.id);
-
-  Logger.log(`Meet 링크 생성 완료: ${meetLink}`);
-  return meetLink;
-}
-
-/**
- * 이번 주 Meet 링크를 설정 시트에 저장
- */
-function saveMeetLink(meetLink, eventId) {
-  const ss = getSpreadsheet();
-  const sheet = ss.getSheetByName(CONFIG.SHEET_SETTINGS);
-  const data = sheet.getDataRange().getValues();
-
-  let meetLinkRow = -1;
-  let eventIdRow = -1;
-
-  for (let i = 0; i < data.length; i++) {
-    if (data[i][0] === 'meetLink') meetLinkRow = i + 1;
-    if (data[i][0] === 'meetEventId') eventIdRow = i + 1;
-  }
-
-  // meetLink 행이 없으면 추가, 있으면 업데이트
-  if (meetLinkRow === -1) {
-    sheet.appendRow(['meetLink', meetLink]);
-  } else {
-    sheet.getRange(meetLinkRow, 2).setValue(meetLink);
-  }
-
-  if (eventIdRow === -1) {
-    sheet.appendRow(['meetEventId', eventId]);
-  } else {
-    sheet.getRange(eventIdRow, 2).setValue(eventId);
-  }
-}
 
 /**
  * 유튜브 라이브 링크 가져오기
@@ -252,44 +164,6 @@ function saveMeetLink(meetLink, eventId) {
 function getLiveLink() {
   const settings = getSettings();
   return settings.liveLink || CONFIG.YOUTUBE_LIVE_URL || '';
-}
-
-/**
- * 다음 월요일 날짜 반환
- */
-function getNextMonday() {
-  const now = new Date();
-  const dayOfWeek = now.getDay(); // 0=일, 1=월, ..., 6=토
-  const daysUntilMonday = dayOfWeek === 0 ? 1 : dayOfWeek === 1 ? 0 : 8 - dayOfWeek;
-  const nextMonday = new Date(now);
-  nextMonday.setDate(now.getDate() + daysUntilMonday);
-  nextMonday.setHours(0, 0, 0, 0);
-  return nextMonday;
-}
-
-/**
- * 신청자를 기존 캘린더 이벤트에 게스트로 추가 (선택)
- */
-function addGuestToMeetEvent(email) {
-  const settings = getSettings();
-  if (!settings.meetEventId) return;
-
-  try {
-    const event = Calendar.Events.get(CONFIG.CALENDAR_ID, settings.meetEventId);
-    const attendees = event.attendees || [];
-
-    // 이미 추가된 이메일인지 체크
-    if (attendees.some(a => a.email === email)) return;
-
-    attendees.push({ email: email });
-    event.attendees = attendees;
-
-    Calendar.Events.update(event, CONFIG.CALENDAR_ID, settings.meetEventId, {
-      sendUpdates: 'none', // 캘린더 초대 메일 보내지 않음 (우리 메일로 안내)
-    });
-  } catch (e) {
-    Logger.log(`캘린더 게스트 추가 실패: ${e.message}`);
-  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -883,8 +757,7 @@ function initializeSheets() {
     ['thisWeekTopic', '클로드코드 기본 세팅'],
     ['thisWeekDescription', '클로드코드 설치부터 MCP 연결, 클로드 스킬 세팅까지 한 번에 끝내는 시간입니다.'],
     ['preparation', '노트북 또는 데스크톱'],
-    ['meetLink', ''],       // 금요일 트리거가 자동으로 채움
-    ['meetEventId', ''],    // 금요일 트리거가 자동으로 채움
+    ['liveLink', ''],       // 유튜브 라이브 링크 (매주 수동 업데이트)
   ]);
   settingsSheet.getRange(1, 1, 1, 2).setFontWeight('bold');
   settingsSheet.setFrozenRows(1);
@@ -934,14 +807,12 @@ function logStats() {
 // 내용:
 //   #{name}님, 수학비서 AI 활용법 강의 신청이 완료되었습니다!
 //
-//   📅 일시: 매주 월요일 밤 10:30 ~ 11:30
-//   💻 방식: Google Meet 온라인
-//   🔗 입장: #{meetLink}
+//   📅 일시: 매주 월요일 #{lectureTime}
+//   📺 방식: 유튜브 라이브 (완전 무료)
+//   ▶ 입장: #{liveLink}
 //
-//   🎁 신청 선물은 이메일로 발송해드렸습니다.
 //   확인 메일도 함께 보내드렸으니 확인해주세요!
 //
-//   ※ 매주 새로운 Meet 링크가 발급됩니다.
 //   ※ 문의: mathsecr@example.com
 // ────────────────────────────────────
 
