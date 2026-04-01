@@ -1,5 +1,5 @@
 // ── GAS URL (배포 후 실제 URL로 교체) ──
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxXxJX26_mWoGUYYmh-9SwmzPH3A41rtVm4IMylyHZ6aIOSiXK6-O5ZXDQKFAQC5lMa4g/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwYlwZ4wx1RNpNlJNRv_0ZxKgiim5wbHWOiVuRUe9ObpoMxOuz2Rq_00lfawAPE9uh5MQ/exec';
 const IS_DEMO = GAS_URL.includes('AKfycbxXxJX26_mWoGUYYmh');
 
 // ── 후기 동적 로딩 ──
