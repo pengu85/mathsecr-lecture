@@ -342,10 +342,11 @@
       };
 
       try {
-        // ── Google Apps Script 연동 ──
+        // ── Google Apps Script 연동 (배포 후 실제 URL로 교체) ──
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbxXxJX26_mWoGUYYmh-9SwmzPH3A41rtVm4IMylyHZ6aIOSiXK6-O5ZXDQKFAQC5lMa4g/exec';
+        const IS_DEMO = GAS_URL.includes('AKfycbxXxJX26_mWoGUYYmh');
 
-        if (GAS_URL === 'https://script.google.com/macros/s/AKfycbxXxJX26_mWoGUYYmh-9SwmzPH3A41rtVm4IMylyHZ6aIOSiXK6-O5ZXDQKFAQC5lMa4g/exec') {
+        if (IS_DEMO) {
           console.log('데모 모드 - 후기 데이터:', reviewData);
           await new Promise(resolve => setTimeout(resolve, 800));
         } else {

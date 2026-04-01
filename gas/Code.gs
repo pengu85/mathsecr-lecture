@@ -49,9 +49,108 @@ function doPost(e) {
   }
 }
 
-// CORS preflight 대응
+// CORS preflight 대응 + API 라우팅
 function doGet(e) {
+  const action = e && e.parameter && e.parameter.action;
+
+  if (action === 'stats') {
+    return handleGetStats();
+  }
+  if (action === 'reviews') {
+    return handleGetReviews();
+  }
+
   return createJsonResponse({ success: true, message: 'API is running' });
+}
+
+/**
+ * 관리자 대시보드용 통계 반환
+ */
+function handleGetStats() {
+  const ss = getSpreadsheet();
+  const registerSheet = ss.getSheetByName(CONFIG.SHEET_REGISTER);
+  const reviewSheet = ss.getSheetByName(CONFIG.SHEET_REVIEW);
+
+  const registerData = registerSheet.getDataRange().getValues();
+  const reviewData = reviewSheet.getDataRange().getValues();
+
+  const totalRegistered = Math.max(0, registerData.length - 1);
+  const totalReviews = Math.max(0, reviewData.length - 1);
+
+  // 평균 별점
+  const avgRating = totalReviews > 0
+    ? (reviewData.slice(1).reduce((sum, row) => sum + Number(row[3]), 0) / totalReviews).toFixed(1)
+    : '0';
+
+  // NPS 계산 (추천의향 0-10)
+  const npsScores = reviewData.slice(1).map(row => Number(row[7])).filter(n => !isNaN(n) && n >= 0);
+  let nps = 0;
+  if (npsScores.length > 0) {
+    const promoters = npsScores.filter(s => s >= 9).length;
+    const detractors = npsScores.filter(s => s <= 6).length;
+    nps = Math.round(((promoters - detractors) / npsScores.length) * 100);
+  }
+
+  // 후기 작성률
+  const reviewRate = totalRegistered > 0
+    ? Math.round((totalReviews / totalRegistered) * 100)
+    : 0;
+
+  // 직책별 분포
+  const roles = {};
+  registerData.slice(1).forEach(row => {
+    const role = row[4] || '미입력';
+    roles[role] = (roles[role] || 0) + 1;
+  });
+
+  // 최근 7일 신청자 수
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  const recentRegistrations = registerData.slice(1)
+    .filter(row => row[0] && new Date(row[0]) > oneWeekAgo).length;
+
+  // 최근 후기 5개
+  const recentReviews = reviewData.slice(1).slice(-5).reverse().map(row => ({
+    date: row[0] ? new Date(row[0]).toLocaleDateString('ko-KR') : '',
+    name: row[1],
+    rating: Number(row[3]),
+    comment: row[4],
+  }));
+
+  return createJsonResponse({
+    success: true,
+    data: {
+      totalRegistered,
+      totalReviews,
+      avgRating: Number(avgRating),
+      nps,
+      reviewRate,
+      recentRegistrations,
+      roles,
+      recentReviews,
+    }
+  });
+}
+
+/**
+ * 랜딩페이지용 - 별점 4점 이상 후기 반환
+ */
+function handleGetReviews() {
+  const ss = getSpreadsheet();
+  const reviewSheet = ss.getSheetByName(CONFIG.SHEET_REVIEW);
+  const data = reviewSheet.getDataRange().getValues();
+
+  const goodReviews = data.slice(1)
+    .filter(row => Number(row[3]) >= 4 && row[4])
+    .map(row => ({
+      name: row[1],
+      rating: Number(row[3]),
+      comment: row[4],
+    }))
+    .slice(-6)
+    .reverse();
+
+  return createJsonResponse({ success: true, data: goodReviews });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -473,7 +572,23 @@ function sendMondayFinalReminder() {
  * 트리거: 매주 화요일 00:00
  */
 function sendReviewRequest() {
-  const recipients = getActiveRecipients();
+  const ss = getSpreadsheet();
+  const reviewSheet = ss.getSheetByName(CONFIG.SHEET_REVIEW);
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+  const reviewData = reviewSheet.getDataRange().getValues();
+  const reviewedEmails = reviewData
+    .filter(row => row[0] && new Date(row[0]) > oneWeekAgo)
+    .map(row => row[2]); // C열: 이메일
+
+  const allRecipients = getActiveRecipients();
+  const recipients = allRecipients.filter(r => !reviewedEmails.includes(r.email));
+
+  if (recipients.length === 0) {
+    Logger.log('모든 참가자가 이미 후기를 작성했습니다.');
+    return;
+  }
 
   const subject = '[수학비서] 어제 강의 어떠셨나요? 30초 후기를 남겨주세요!';
 
@@ -727,12 +842,13 @@ function initializeSheets() {
   if (!sheet) {
     sheet = ss.insertSheet(CONFIG.SHEET_REGISTER);
   }
-  sheet.getRange(1, 1, 1, 12).setValues([[
+  sheet.getRange(1, 1, 1, 18).setValues([[
     '신청일시', '이름', '연락처', '이메일', '직책',
     '경력', '학원명', '관심주제', '어려운점', '마케팅동의',
-    '상태', '후기작성'
+    '상태', '후기작성', '교육대상', '활동지역', '인식도설문',
+    '기대서비스', '차별점', 'DB화기대'
   ]]);
-  sheet.getRange(1, 1, 1, 12).setFontWeight('bold');
+  sheet.getRange(1, 1, 1, 18).setFontWeight('bold');
   sheet.setFrozenRows(1);
 
   // 후기 시트 헤더

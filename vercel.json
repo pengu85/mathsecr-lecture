@@ -12,6 +12,7 @@
     }
   ],
   "rewrites": [
-    { "source": "/review", "destination": "/review.html" }
+    { "source": "/review", "destination": "/review.html" },
+    { "source": "/admin", "destination": "/admin.html" }
   ]
 }

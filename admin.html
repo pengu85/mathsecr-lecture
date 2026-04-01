@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>수학비서 강의 관리 대시보드</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --primary: #2563EB;
+      --primary-light: #DBEAFE;
+      --dark: #111827;
+      --gray-700: #374151;
+      --gray-500: #6B7280;
+      --gray-300: #D1D5DB;
+      --gray-100: #F3F4F6;
+      --white: #FFFFFF;
+      --success: #10B981;
+      --warning: #F59E0B;
+      --danger: #EF4444;
+    }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: var(--gray-100);
+      color: var(--dark);
+      min-height: 100vh;
+    }
+
+    .header {
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-300);
+      padding: 20px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header h1 { font-size: 20px; font-weight: 700; }
+    .header .refresh-btn {
+      padding: 8px 16px;
+      background: var(--primary);
+      color: var(--white);
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .header .refresh-btn:hover { background: #1D4ED8; }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+
+    /* Setup */
+    .setup-bar {
+      background: var(--warning);
+      color: #92400E;
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .setup-bar input {
+      flex: 1;
+      max-width: 500px;
+      padding: 6px 12px;
+      border: 1px solid #D97706;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: monospace;
+    }
+    .setup-bar button {
+      padding: 6px 14px;
+      background: #92400E;
+      color: var(--white);
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .setup-bar.connected { display: none; }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--white);
+      border-radius: 14px;
+      padding: 24px;
+      border: 1px solid var(--gray-300);
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: var(--gray-500);
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .stat-sub {
+      font-size: 12px;
+      color: var(--gray-500);
+      margin-top: 6px;
+    }
+
+    .stat-value.positive { color: var(--success); }
+    .stat-value.warning { color: var(--warning); }
+    .stat-value.danger { color: var(--danger); }
+
+    /* Sections */
+    .section {
+      background: var(--white);
+      border-radius: 14px;
+      border: 1px solid var(--gray-300);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .section h2 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Roles chart */
+    .role-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .role-name {
+      width: 80px;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .role-track {
+      flex: 1;
+      height: 28px;
+      background: var(--gray-100);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .role-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      padding-left: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--white);
+      min-width: 30px;
+      transition: width 0.5s ease;
+    }
+
+    /* Reviews table */
+    .review-list { list-style: none; }
+    .review-item {
+      padding: 14px 0;
+      border-bottom: 1px solid var(--gray-100);
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .review-item:last-child { border-bottom: none; }
+
+    .review-rating {
+      font-size: 14px;
+      color: var(--warning);
+      flex-shrink: 0;
+      min-width: 90px;
+    }
+
+    .review-content {
+      flex: 1;
+    }
+
+    .review-content .name {
+      font-size: 12px;
+      color: var(--gray-500);
+      margin-bottom: 4px;
+    }
+
+    .review-content .text {
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 48px;
+      color: var(--gray-500);
+      font-size: 14px;
+    }
+
+    @media (max-width: 640px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .stat-value { font-size: 24px; }
+      .container { padding: 16px; }
+      .role-name { width: 60px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="setup-bar" id="setupBar">
+    GAS URL 설정:
+    <input type="text" id="gasUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
+    <button onclick="saveGasUrl()">저장</button>
+  </div>
+
+  <div class="header">
+    <h1>수학비서 강의 대시보드</h1>
+    <button class="refresh-btn" onclick="loadStats()">새로고침</button>
+  </div>
+
+  <div class="container">
+    <div id="content">
+      <div class="loading">GAS URL을 설정하면 데이터를 불러옵니다.</div>
+    </div>
+  </div>
+
+  <script>
+    let GAS_URL = localStorage.getItem('mathsecr_gas_url') || '';
+
+    if (GAS_URL) {
+      document.getElementById('setupBar').classList.add('connected');
+      loadStats();
+    }
+
+    function saveGasUrl() {
+      const url = document.getElementById('gasUrlInput').value.trim();
+      if (!url) return alert('URL을 입력해주세요.');
+      localStorage.setItem('mathsecr_gas_url', url);
+      GAS_URL = url;
+      document.getElementById('setupBar').classList.add('connected');
+      loadStats();
+    }
+
+    async function loadStats() {
+      const container = document.getElementById('content');
+      container.innerHTML = '<div class="loading">데이터를 불러오는 중...</div>';
+
+      try {
+        const res = await fetch(GAS_URL + '?action=stats');
+        const json = await res.json();
+
+        if (!json.success) throw new Error(json.message);
+        render(json.data);
+      } catch (err) {
+        container.innerHTML = `<div class="loading">데이터를 불러올 수 없습니다.<br><small>${err.message}</small></div>`;
+      }
+    }
+
+    function render(d) {
+      const npsClass = d.nps >= 50 ? 'positive' : d.nps >= 0 ? 'warning' : 'danger';
+      const rateClass = d.reviewRate >= 50 ? 'positive' : d.reviewRate >= 30 ? 'warning' : 'danger';
+
+      // Roles chart
+      const maxRole = Math.max(...Object.values(d.roles), 1);
+      const rolesHtml = Object.entries(d.roles)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, count]) => `
+          <div class="role-bar">
+            <div class="role-name">${name}</div>
+            <div class="role-track">
+              <div class="role-fill" style="width: ${(count / maxRole) * 100}%">${count}</div>
+            </div>
+          </div>
+        `).join('');
+
+      // Reviews
+      const reviewsHtml = d.recentReviews.length > 0
+        ? d.recentReviews.map(r => `
+          <li class="review-item">
+            <div class="review-rating">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</div>
+            <div class="review-content">
+              <div class="name">${r.name} · ${r.date}</div>
+              <div class="text">${escapeHtml(r.comment)}</div>
+            </div>
+          </li>
+        `).join('')
+        : '<li class="review-item"><div class="review-content"><div class="text" style="color:#9CA3AF;">아직 후기가 없습니다.</div></div></li>';
+
+      document.getElementById('content').innerHTML = `
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">총 신청자</div>
+            <div class="stat-value">${d.totalRegistered}</div>
+            <div class="stat-sub">최근 7일: +${d.recentRegistrations}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">평균 별점</div>
+            <div class="stat-value">${d.avgRating}</div>
+            <div class="stat-sub">후기 ${d.totalReviews}개 기준</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">NPS 점수</div>
+            <div class="stat-value ${npsClass}">${d.nps}</div>
+            <div class="stat-sub">${d.nps >= 50 ? '우수' : d.nps >= 0 ? '보통' : '개선 필요'}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">후기 작성률</div>
+            <div class="stat-value ${rateClass}">${d.reviewRate}%</div>
+            <div class="stat-sub">${d.totalReviews} / ${d.totalRegistered}</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>직책별 분포</h2>
+          ${rolesHtml || '<p style="color:#9CA3AF;font-size:14px;">데이터가 없습니다.</p>'}
+        </div>
+
+        <div class="section">
+          <h2>최근 후기</h2>
+          <ul class="review-list">${reviewsHtml}</ul>
+        </div>
+      `;
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
