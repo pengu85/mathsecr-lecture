@@ -228,7 +228,7 @@ surveySubmitBtn.addEventListener('click', async () => {
     alert('신청 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
   } finally {
     surveySubmitBtn.disabled = false;
-    surveySubmitBtn.textContent = '\u{1F381} 설문 완료하고 선물 받기';
+    surveySubmitBtn.textContent = '설문 완료하고 신청하기';
   }
 });
 

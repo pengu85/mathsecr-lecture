@@ -11,7 +11,7 @@ const CONFIG = {
 
   // 강의 정보
   LECTURE_DAY: '매주 월요일',
-  LECTURE_TIME: '밤 10:30 ~ 11:30',
+  LECTURE_TIME: '밤 11:00 ~ 12:00',
 
   // Google Calendar 설정 (Meet 링크 자동 생성용)
   CALENDAR_ID: 'primary', // 기본 캘린더 사용. 별도 캘린더 시 ID 입력
