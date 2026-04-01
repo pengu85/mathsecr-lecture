@@ -4,7 +4,7 @@
 
 // ── 설정 ──
 const CONFIG = {
-  SPREADSHEET_ID: '', // ← Google Sheets ID를 여기에 입력 (URL의 /d/XXXX/edit 부분)
+  SPREADSHEET_ID: '1dr-MQKCZXcGdqks5j1zls7g_RSkjmhd_yVyF-jOpUwI',
   SHEET_REGISTER: '신청자',
   SHEET_REVIEW: '후기',
   SHEET_SETTINGS: '설정',
@@ -22,12 +22,12 @@ const CONFIG = {
   // 후기 폼 URL
   REVIEW_FORM_URL: 'https://mathsecr-lecture.vercel.app/review',
 
-  // 솔라피 (알림톡)
-  SOLAPI_API_KEY: '',       // ← 솔라피 API Key
-  SOLAPI_API_SECRET: '',    // ← 솔라피 API Secret
-  SOLAPI_SENDER_PHONE: '',  // ← 발신번호 (솔라피에 등록된 번호)
-  SOLAPI_PF_ID: '',         // ← 카카오 비즈니스 채널 ID (pfId)
-  SOLAPI_TEMPLATE_ID: '',   // ← 신청완료 알림톡 템플릿 ID
+  // 솔라피 (알림톡/문자)
+  SOLAPI_API_KEY: 'NCS5PM0NKWQAKNJQ',
+  SOLAPI_API_SECRET: 'RUHZH8VNXMREC0JK0JKEUFN4P783W0WQ',
+  SOLAPI_SENDER_PHONE: '01083950234',
+  SOLAPI_PF_ID: '',         // ← 카카오 비즈니스 채널 ID (알림톡 사용 시)
+  SOLAPI_TEMPLATE_ID: '',   // ← 알림톡 템플릿 ID (비워두면 LMS 문자로 발송)
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -751,7 +751,7 @@ function initializeSheets() {
   if (!settingsSheet) {
     settingsSheet = ss.insertSheet(CONFIG.SHEET_SETTINGS);
   }
-  settingsSheet.getRange(1, 1, 7, 2).setValues([
+  settingsSheet.getRange(1, 1, 6, 2).setValues([
     ['키', '값'],
     ['currentWeek', '1'],
     ['thisWeekTopic', '클로드코드 기본 세팅'],
