@@ -13,13 +13,13 @@ const CONFIG = {
   LECTURE_DAY: '매주 월요일',
   LECTURE_TIME: '밤 11:00 ~ 12:00',
 
-  // Google Calendar 설정 (Meet 링크 자동 생성용)
-  CALENDAR_ID: 'primary', // 기본 캘린더 사용. 별도 캘린더 시 ID 입력
+  // 유튜브 라이브
+  YOUTUBE_LIVE_URL: '', // ← 유튜브 라이브 링크 (매주 업데이트하거나, 설정 시트에서 관리)
 
   // 발신자 정보
   SENDER_NAME: '수학비서',
 
-  // 후기 폼 URL (배포 후 생성되는 URL + ?mode=review 파라미터)
+  // 후기 폼 URL
   REVIEW_FORM_URL: 'https://mathsecr-lecture.vercel.app/review',
 
   // 솔라피 (알림톡)
@@ -246,16 +246,12 @@ function saveMeetLink(meetLink, eventId) {
 }
 
 /**
- * 설정 시트에서 이번 주 Meet 링크 가져오기
- * 없으면 새로 생성
+ * 유튜브 라이브 링크 가져오기
+ * 설정 시트의 liveLink 값 우선, 없으면 CONFIG.YOUTUBE_LIVE_URL 사용
  */
-function getThisWeekMeetLink() {
+function getLiveLink() {
   const settings = getSettings();
-  if (settings.meetLink) {
-    return settings.meetLink;
-  }
-  // 링크가 없으면 새로 생성
-  return createWeeklyMeetEvent();
+  return settings.liveLink || CONFIG.YOUTUBE_LIVE_URL || '';
 }
 
 /**
@@ -337,17 +333,14 @@ function handleRegistration(data) {
     data.surveyDbExpectation || '',   // R: DB화 기대
   ]);
 
-  // 이번 주 Meet 링크 가져오기
-  const meetLink = getThisWeekMeetLink();
+  // 유튜브 라이브 링크 가져오기 (설정 시트 우선, 없으면 CONFIG)
+  const liveLink = getLiveLink();
 
-  // 확인 메일 발송 (Meet 링크 포함)
-  sendConfirmationEmail(data, meetLink);
-
-  // 캘린더 이벤트에 게스트 추가 (선택)
-  addGuestToMeetEvent(data.email);
+  // 확인 메일 발송
+  sendConfirmationEmail(data, liveLink);
 
   // 솔라피 알림톡 발송
-  sendRegistrationAlimtalk(data, meetLink);
+  sendRegistrationAlimtalk(data, liveLink);
 
   return createJsonResponse({ success: true, message: '신청이 완료되었습니다.' });
 }
@@ -356,8 +349,21 @@ function handleRegistration(data) {
 // 3. 이메일 템플릿
 // ═══════════════════════════════════════════════════════════
 
-function sendConfirmationEmail(data, meetLink) {
+function sendConfirmationEmail(data, liveLink) {
   const subject = '[수학비서] AI 활용법 강의 신청이 완료되었습니다!';
+
+  const liveLinkHtml = liveLink
+    ? `<div style="text-align:center;margin:24px 0;">
+          <a href="${liveLink}" style="display:inline-block;background:#FF0000;color:#fff;padding:14px 40px;border-radius:10px;text-decoration:none;font-size:16px;font-weight:600;">
+            ▶ 유튜브 라이브 입장하기
+          </a>
+        </div>
+        <p style="text-align:center;font-size:13px;color:#6B7280;margin:0 0 20px;">
+          ${liveLink}
+        </p>`
+    : `<p style="text-align:center;font-size:14px;color:#6B7280;margin:20px 0;">
+          라이브 링크는 강의 당일 별도 안내드립니다.
+        </p>`;
 
   const htmlBody = `
     <div style="max-width:600px;margin:0 auto;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
@@ -367,29 +373,21 @@ function sendConfirmationEmail(data, meetLink) {
       </div>
       <div style="background:#fff;padding:32px;border:1px solid #E5E7EB;border-top:none;border-radius:0 0 16px 16px;">
         <p style="font-size:16px;color:#111827;margin:0 0 20px;">
-          <strong>${data.name}</strong>님, 환영합니다! 🎉
+          <strong>${data.name}</strong>님, 환영합니다!
         </p>
         <div style="background:#F3F4F6;border-radius:12px;padding:20px;margin:0 0 20px;">
           <p style="margin:0 0 8px;font-size:14px;color:#6B7280;">📅 일시</p>
-          <p style="margin:0 0 16px;font-size:16px;color:#111827;font-weight:600;">${CONFIG.LECTURE_DAY} 밤 10:30 ~ 11:30</p>
-          <p style="margin:0 0 8px;font-size:14px;color:#6B7280;">💻 참여 방법</p>
-          <p style="margin:0;font-size:16px;color:#111827;font-weight:600;">Google Meet 온라인 (아래 링크 클릭)</p>
+          <p style="margin:0 0 16px;font-size:16px;color:#111827;font-weight:600;">${CONFIG.LECTURE_DAY} ${CONFIG.LECTURE_TIME}</p>
+          <p style="margin:0 0 8px;font-size:14px;color:#6B7280;">📺 참여 방법</p>
+          <p style="margin:0;font-size:16px;color:#111827;font-weight:600;">유튜브 라이브 (완전 무료)</p>
         </div>
-        <div style="text-align:center;margin:24px 0;">
-          <a href="${meetLink}" style="display:inline-block;background:#1A73E8;color:#fff;padding:14px 40px;border-radius:10px;text-decoration:none;font-size:16px;font-weight:600;">
-            Google Meet 입장 링크
-          </a>
-        </div>
-        <p style="text-align:center;font-size:13px;color:#6B7280;margin:0 0 20px;">
-          ${meetLink}
-        </p>
+        ${liveLinkHtml}
         <div style="border-top:1px solid #E5E7EB;padding-top:20px;margin-top:20px;">
           <p style="font-size:14px;color:#6B7280;margin:0 0 8px;font-weight:600;">📌 참고 사항</p>
           <ul style="font-size:13px;color:#6B7280;margin:0;padding-left:20px;line-height:2;">
-            <li>노트북 또는 데스크톱을 준비해주세요</li>
-            <li>강의 시작 10분 전 입장을 권장합니다</li>
+            <li>스마트폰, 태블릿, PC 어디서든 시청 가능합니다</li>
+            <li>유튜브 채팅으로 실시간 질의응답이 가능합니다</li>
             <li>녹화본은 강의 다음 날 메일로 보내드립니다</li>
-            <li>매주 새로운 Meet 링크가 발급됩니다</li>
             <li>문의: mathsecr@example.com</li>
           </ul>
         </div>
@@ -415,15 +413,21 @@ function sendConfirmationEmail(data, meetLink) {
  * 트리거: 매주 금요일 09:00
  */
 function sendFridayReminder() {
-  // 매주 금요일에 새 Google Meet 링크를 자동 생성
-  const meetLink = createWeeklyMeetEvent();
-
+  const liveLink = getLiveLink();
   const recipients = getActiveRecipients();
   const settings = getSettings();
   const weekTopic = settings.thisWeekTopic || '이번 주 강의';
   const weekNum = settings.currentWeek || '1';
 
   const subject = `[수학비서] 이번 주 월요일 강의: ${weekTopic}`;
+
+  const liveLinkHtml = liveLink
+    ? `<div style="text-align:center;margin:0 0 20px;">
+          <a href="${liveLink}" style="display:inline-block;background:#FF0000;color:#fff;padding:12px 32px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:600;">
+            ▶ 유튜브 라이브 입장
+          </a>
+        </div>`
+    : '<p style="text-align:center;font-size:14px;color:#6B7280;margin:0 0 20px;">라이브 링크는 월요일 당일 안내드립니다.</p>';
 
   const htmlBody = `
     <div style="max-width:600px;margin:0 auto;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
@@ -433,7 +437,7 @@ function sendFridayReminder() {
       </div>
       <div style="background:#fff;padding:28px;border:1px solid #E5E7EB;border-top:none;border-radius:0 0 16px 16px;">
         <p style="font-size:15px;color:#111827;line-height:1.7;margin:0 0 20px;">
-          안녕하세요! 이번 주 월요일 밤 강의 주제를 미리 알려드립니다. 🎓
+          안녕하세요! 이번 주 월요일 밤 강의 주제를 미리 알려드립니다.
         </p>
         <div style="background:#FEF3C7;border-left:4px solid #F59E0B;padding:16px;border-radius:0 8px 8px 0;margin:0 0 20px;">
           <p style="margin:0;font-size:14px;color:#92400E;line-height:1.6;">
@@ -442,15 +446,10 @@ function sendFridayReminder() {
         </div>
         <div style="background:#F3F4F6;border-radius:12px;padding:16px;margin:0 0 20px;">
           <p style="margin:0;font-size:14px;color:#374151;">
-            📅 <strong>월요일 밤 10:30</strong> | 💻 <strong>Google Meet</strong>
+            📅 <strong>월요일 ${CONFIG.LECTURE_TIME}</strong> | 📺 <strong>유튜브 라이브</strong>
           </p>
         </div>
-        <div style="text-align:center;margin:0 0 20px;">
-          <a href="${meetLink}" style="display:inline-block;background:#1A73E8;color:#fff;padding:12px 32px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:600;">
-            Google Meet 입장 링크
-          </a>
-          <p style="font-size:12px;color:#9CA3AF;margin:8px 0 0;">${meetLink}</p>
-        </div>
+        ${liveLinkHtml}
         ${settings.preparation ? `
         <p style="font-size:14px;color:#6B7280;margin:0;">
           <strong>📌 준비물:</strong> ${settings.preparation}
@@ -466,7 +465,7 @@ function sendFridayReminder() {
         htmlBody: htmlBody.replace('안녕하세요!', `${r.name}님, 안녕하세요!`),
         name: CONFIG.SENDER_NAME,
       });
-      Utilities.sleep(100); // Gmail 속도 제한 방지
+      Utilities.sleep(100);
     } catch (e) {
       Logger.log(`메일 발송 실패: ${r.email} - ${e.message}`);
     }
@@ -480,28 +479,31 @@ function sendFridayReminder() {
  * 트리거: 매주 월요일 09:00
  */
 function sendMondayMorningReminder() {
-  const meetLink = getThisWeekMeetLink();
+  const liveLink = getLiveLink();
   const recipients = getActiveRecipients();
 
-  const subject = '[수학비서] 오늘 밤 10:30 AI 활용법 강의가 있습니다!';
+  const subject = '[수학비서] 오늘 밤 11시 AI 활용법 강의가 있습니다!';
+
+  const liveLinkHtml = liveLink
+    ? `<div style="text-align:center;margin:20px 0;">
+          <a href="${liveLink}" style="display:inline-block;background:#FF0000;color:#fff;padding:14px 36px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:600;">
+            ▶ 유튜브 라이브 입장하기
+          </a>
+        </div>`
+    : '<p style="text-align:center;font-size:14px;color:#6B7280;margin:20px 0;">라이브 링크는 강의 시작 전 별도 안내드립니다.</p>';
 
   const htmlBody = `
     <div style="max-width:600px;margin:0 auto;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
       <div style="background:#2563EB;padding:24px;border-radius:16px 16px 0 0;text-align:center;">
-        <h1 style="color:#fff;font-size:20px;margin:0;">⏰ 오늘 밤 10:30 강의!</h1>
+        <h1 style="color:#fff;font-size:20px;margin:0;">오늘 밤 11시 강의!</h1>
       </div>
       <div style="background:#fff;padding:28px;border:1px solid #E5E7EB;border-top:none;border-radius:0 0 16px 16px;">
         <p style="font-size:15px;color:#111827;line-height:1.7;margin:0 0 20px;">
-          오늘 밤 수학비서 AI 활용법 강의가 있습니다.<br>잊지 마시고 참여해주세요!
+          오늘 밤 수학비서 AI 활용법 강의가 있습니다.<br>유튜브 라이브로 편하게 참여해주세요!
         </p>
-        <div style="text-align:center;margin:20px 0;">
-          <a href="${meetLink}" style="display:inline-block;background:#1A73E8;color:#fff;padding:14px 36px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:600;">
-            Google Meet 입장하기
-          </a>
-          <p style="font-size:12px;color:#9CA3AF;margin:8px 0 0;">${meetLink}</p>
-        </div>
+        ${liveLinkHtml}
         <p style="text-align:center;font-size:13px;color:#9CA3AF;margin:16px 0 0;">
-          시작 10분 전 입장을 권장합니다
+          스마트폰, 태블릿, PC 어디서든 시청 가능합니다
         </p>
       </div>
     </div>
@@ -526,24 +528,31 @@ function sendMondayMorningReminder() {
  * 월요일 밤 9시 - 1시간 전 최종 알림
  * 트리거: 매주 월요일 21:00
  */
+/**
+ * 월요일 밤 10시 - 1시간 전 최종 알림
+ * 트리거: 매주 월요일 22:00
+ */
 function sendMondayFinalReminder() {
-  const meetLink = getThisWeekMeetLink();
+  const liveLink = getLiveLink();
   const recipients = getActiveRecipients();
 
-  const subject = '[수학비서] 1시간 후 강의 시작! Meet 링크 안내';
+  const subject = '[수학비서] 1시간 후 강의 시작! 유튜브 라이브 링크 안내';
+
+  const liveLinkHtml = liveLink
+    ? `<a href="${liveLink}" style="display:inline-block;background:#FF0000;color:#fff;padding:16px 48px;border-radius:12px;text-decoration:none;font-size:17px;font-weight:700;">
+          ▶ 지금 유튜브 라이브 입장하기
+        </a>`
+    : '<p style="font-size:14px;color:#6B7280;">라이브 링크는 곧 안내드립니다.</p>';
 
   const htmlBody = `
     <div style="max-width:600px;margin:0 auto;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
       <div style="background:#DC2626;padding:20px;border-radius:16px 16px 0 0;text-align:center;">
-        <h1 style="color:#fff;font-size:20px;margin:0;">🔔 1시간 후 시작!</h1>
+        <h1 style="color:#fff;font-size:20px;margin:0;">1시간 후 시작!</h1>
       </div>
       <div style="background:#fff;padding:24px;border:1px solid #E5E7EB;border-top:none;border-radius:0 0 16px 16px;text-align:center;">
-        <p style="font-size:28px;margin:0 0 8px;">22:30</p>
-        <p style="font-size:14px;color:#6B7280;margin:0 0 20px;">밤 10시 30분 시작</p>
-        <a href="${meetLink}" style="display:inline-block;background:#1A73E8;color:#fff;padding:16px 48px;border-radius:12px;text-decoration:none;font-size:17px;font-weight:700;">
-          지금 Google Meet 입장하기
-        </a>
-        <p style="font-size:12px;color:#9CA3AF;margin:12px 0 0;">${meetLink}</p>
+        <p style="font-size:28px;margin:0 0 8px;">23:00</p>
+        <p style="font-size:14px;color:#6B7280;margin:0 0 20px;">밤 11시 시작</p>
+        ${liveLinkHtml}
       </div>
     </div>
   `;
@@ -957,7 +966,7 @@ function createSolapiAuthHeader() {
  * 신청 완료 알림톡 발송
  * 알림톡 실패 시 LMS(장문 문자)로 대체 발송
  */
-function sendRegistrationAlimtalk(data, meetLink) {
+function sendRegistrationAlimtalk(data, liveLink) {
   if (!CONFIG.SOLAPI_API_KEY || !CONFIG.SOLAPI_API_SECRET) {
     Logger.log('솔라피 API 키 미설정 - 알림톡 건너뜀');
     return;
@@ -980,18 +989,19 @@ function sendRegistrationAlimtalk(data, meetLink) {
       templateId: CONFIG.SOLAPI_TEMPLATE_ID,
       variables: {
         '#{name}': data.name,
-        '#{meetLink}': meetLink || '(강의 전 별도 안내)',
+        '#{liveLink}': liveLink || '(강의 당일 별도 안내)',
+        '#{lectureTime}': CONFIG.LECTURE_TIME,
       },
     };
     // 알림톡 실패 시 LMS 대체 발송
-    message.type = 'ATA'; // 알림톡
+    message.type = 'ATA';
     message.subject = '[수학비서] 강의 신청 완료';
-    message.text = buildSmsText(data.name, meetLink);
+    message.text = buildSmsText(data.name, liveLink);
   } else {
     // 템플릿 미등록 시 LMS로 발송
     message.type = 'LMS';
     message.subject = '[수학비서] 강의 신청 완료';
-    message.text = buildSmsText(data.name, meetLink);
+    message.text = buildSmsText(data.name, liveLink);
   }
 
   const url = 'https://api.solapi.com/messages/v4/send';
@@ -1021,17 +1031,14 @@ function sendRegistrationAlimtalk(data, meetLink) {
 /**
  * LMS 대체 발송용 텍스트 생성
  */
-function buildSmsText(name, meetLink) {
+function buildSmsText(name, liveLink) {
   return [
     `${name}님, 수학비서 AI 활용법 강의 신청이 완료되었습니다!`,
     '',
-    '📅 매주 월요일 밤 10:30 ~ 11:30',
-    '💻 Google Meet 온라인',
-    meetLink ? `🔗 ${meetLink}` : '',
+    `📅 ${CONFIG.LECTURE_DAY} ${CONFIG.LECTURE_TIME}`,
+    '📺 유튜브 라이브 (완전 무료)',
+    liveLink ? `▶ ${liveLink}` : '※ 라이브 링크는 강의 당일 별도 안내드립니다.',
     '',
-    '🎁 신청 선물은 이메일로 발송해드렸습니다.',
-    '',
-    '※ 매주 새로운 Meet 링크가 발급됩니다.',
     '※ 문의: mathsecr@example.com',
   ].filter(Boolean).join('\n');
 }
